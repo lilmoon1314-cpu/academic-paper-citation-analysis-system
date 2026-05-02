@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学术论文引用网络可视化分析平台</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ══ 顶栏 ══ -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-icon">🔬</span>
+      <div>
+        <div class="brand-name">学术引用网络分析平台</div>
+        <div class="brand-sub">Citation Network Analysis &amp; Recommendation</div>
+      </div>
+    </div>
+
+    <div class="search-area">
+      <div class="search-row">
+        <input type="text" class="search-input" id="search-input"
+          placeholder="搜索论文标题、作者，支持英文...">
+        <button class="search-btn" id="search-btn">🔍 搜索</button>
+      </div>
+      <div class="suggest-dropdown" id="suggest-dropdown"></div>
+    </div>
+
+    <div class="topbar-stats">
+      <div class="ts-item"><span class="ts-num" id="ts-nodes">—</span><span class="ts-label">节点</span></div>
+      <div class="ts-divider"></div>
+      <div class="ts-item"><span class="ts-num" id="ts-edges">—</span><span class="ts-label">引用边</span></div>
+      <div class="ts-divider"></div>
+      <div class="ts-item"><span class="ts-num" id="ts-comms">—</span><span class="ts-label">社区</span></div>
+    </div>
+  </header>
+
+  <!-- ══ 左侧面板 ══ -->
+  <aside class="left-panel">
+
+    <!-- 网络配置 -->
+    <div class="lp-section">
+      <div class="lp-title">网络配置</div>
+      <div class="control-group">
+        <div class="ctrl-row">
+          <span class="ctrl-label">节点规模</span>
+          <select class="ctrl-select" id="nodes-select">
+            <option value="50">50 节点（快速）</option>
+            <option value="100">100 节点</option>
+            <option value="200" selected>200 节点（默认）</option>
+            <option value="300">300 节点（详细）</option>
+          </select>
+        </div>
+        <div class="ctrl-row">
+          <span class="ctrl-label">跳数</span>
+          <select class="ctrl-select" id="hops-select">
+            <option value="3">3 跳（近邻）</option>
+            <option value="6" selected>6 跳（标准）</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- 布局模式 -->
+    <div class="lp-section">
+      <div class="lp-title">布局模式</div>
+      <div class="layout-btns">
+        <button class="layout-btn active" data-layout="force">
+          <span class="lb-icon">⚛️</span>力导向
+        </button>
+        <button class="layout-btn" data-layout="community">
+          <span class="lb-icon">🗂️</span>社区聚类
+        </button>
+        <button class="layout-btn" data-layout="timeline">
+          <span class="lb-icon">📅</span>时间演化
+        </button>
+        <button class="layout-btn" data-layout="radial">
+          <span class="lb-icon">🌐</span>放射引用
+        </button>
+      </div>
+    </div>
+
+    <!-- 操作 -->
+    <div class="lp-section">
+      <div class="lp-title">操作</div>
+      <div class="action-btns">
+        <button class="act-btn primary" id="center-btn">🎯 以选中节点重建</button>
+        <button class="act-btn" id="refresh-btn">🔄 重构当前网络</button>
+        <button class="act-btn" id="fit-btn">⛶ 适应窗口</button>
+        <button class="act-btn" id="highlight-upstream-btn">🔼 高亮上游引用链</button>
+        <button class="act-btn" id="highlight-downstream-btn">🔽 高亮下游引用链</button>
+      </div>
+    </div>
+
+    <!-- 图例 -->
+    <div class="lp-section">
+      <div class="lp-title">边方向说明</div>
+      <div class="legend-list">
+        <div class="leg-item"><div class="leg-line" style="background:#5c7cfa"></div>中心节点 → 引用</div>
+        <div class="leg-item"><div class="leg-line" style="background:#ee6666"></div>被引用 → 中心节点</div>
+        <div class="leg-item"><div class="leg-line" style="background:#91cc75"></div>向外延伸引用</div>
+        <div class="leg-item"><div class="leg-line" style="background:#fac858"></div>向内引用关系</div>
+        <div class="leg-item"><div class="leg-line" style="background:#3a4570"></div>邻居节点之间</div>
+      </div>
+    </div>
+
+    <!-- 社区图例（动态生成） -->
+    <div class="lp-section">
+      <div class="lp-title">研究社区</div>
+      <div class="legend-list" id="legend-communities">
+        <div class="default-msg">构建网络后显示</div>
+      </div>
+    </div>
+
+    <!-- 节点大小说明 -->
+    <div class="lp-section">
+      <div class="lp-title">节点大小 = PageRank</div>
+      <div class="size-legend">
+        <div class="sz-dot" style="width:8px;height:8px;"></div><span style="font-size:11px;color:#4a5580">低</span>
+        <div class="sz-dot" style="width:14px;height:14px;"></div><span style="font-size:11px;color:#4a5580">中</span>
+        <div class="sz-dot" style="width:22px;height:22px;"></div><span style="font-size:11px;color:#4a5580">高</span>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ══ 中间图区 ══ -->
+  <main class="chart-area">
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <div class="loading-text" id="loading-text">构建引用网络中...</div>
+      <div class="loading-sub" id="loading-sub">正在从数据库检索引用关系</div>
+    </div>
+
+    <div class="chart-placeholder" id="chart-placeholder">
+      <div class="placeholder-icon">📡</div>
+      <div class="placeholder-text">搜索论文，构建引用网络</div>
+      <div class="placeholder-sub">支持力导向 · 社区聚类 · 时间演化 · 放射引用 四种模式</div>
+    </div>
+
+    <div id="citation-chart"></div>
+
+    <!-- 时间轴（时间演化模式） -->
+    <div id="timeline-overlay">
+      <div class="timeline-bar">
+        <span class="timeline-label">年份筛选</span>
+        <input type="range" id="year-slider" min="1990" max="2025" value="2025" step="1">
+        <span id="year-display">2025</span>
+        <span class="timeline-label">（显示 ≤ 选定年份的论文）</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- ══ 右侧面板 ══ -->
+  <aside class="right-panel">
+
+    <!-- 论文详情 -->
+    <div class="rp-section">
+      <div class="rp-title">📄 论文详情</div>
+      <div id="node-details">
+        <div class="default-msg">点击图中节点查看详情</div>
+      </div>
+    </div>
+
+    <!-- 推荐列表 -->
+    <div class="rp-section">
+      <div class="rp-title">
+        💡 智能推荐
+        <span class="rp-badge" id="rec-sort-label">按年份排序</span>
+      </div>
+      <div id="recommendation-list">
+        <div class="default-msg">选择节点后显示推荐</div>
+      </div>
+    </div>
+
+    <!-- 网络指标分析 -->
+    <div class="rp-section">
+      <div class="rp-title collapsible" id="metrics-toggle">
+        📊 网络指标分析
+        <span class="collapse-icon">▼</span>
+      </div>
+      <div id="metrics-content">
+        <div class="default-msg">构建网络后显示指标</div>
+      </div>
+    </div>
+
+    <!-- 前沿论文发现 -->
+    <div class="rp-section">
+      <div class="rp-title collapsible" id="frontier-toggle">
+        🚀 前沿论文发现
+        <span class="collapse-icon">▼</span>
+      </div>
+      <div id="frontier-content">
+        <div class="default-msg">构建网络后显示前沿论文</div>
+      </div>
+    </div>
+
+  </aside>
+
+</div><!-- /.app -->
+
+<script src="static/main.js"></script>
+</body>
+</html>
