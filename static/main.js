@@ -869,33 +869,20 @@ async function fetchFrontierPapers(){
 function renderFrontier(data){
   var html = '';
 
-  if(data.fastest_growing && data.fastest_growing.length){
+  if(data.latest_papers && data.latest_papers.length){
     html += '<div class="frontier-section">';
-    html += '<div class="frontier-section-title"><span class="frontier-section-icon">📈</span>近2年增长最快</div>';
-    data.fastest_growing.forEach(function(p){
+    html += '<div class="frontier-section-title"><span class="frontier-section-icon">📅</span>最新论文</div>';
+    data.latest_papers.forEach(function(p){
       html += '<div class="frontier-item" onclick="selectPaper(\''+p.id+'\',\''+escHtml(p.name)+'\')">';
       html += '<div class="frontier-item-name">'+escHtml(p.name)+'</div>';
       html += '<div class="frontier-item-meta">';
       html += '<span>📅 '+p.year+'</span>';
-      html += '<span class="frontier-badge growth">增长分 '+p.growth_score.toFixed(2)+'</span>';
       html += '<span style="color:#5c7cfa">PR:'+formatPR(p.pagerank)+'</span>';
+      html += '<span class="frontier-badge community-badge">'+
+        '<span class="comm-dot" style="background:'+communityColor(p.community)+'"></span>'+
+        escHtml(p.communityLabel||'社区'+p.community)+
+      '</span>';
       html += '</div>';
-      html += '</div>';
-    });
-    html += '</div>';
-  }
-
-  if(data.emerging_hotspots && data.emerging_hotspots.length){
-    html += '<div class="frontier-section">';
-    html += '<div class="frontier-section-title"><span class="frontier-section-icon">🔥</span>新兴社区热点</div>';
-    data.emerging_hotspots.forEach(function(h){
-      html += '<div class="frontier-item">';
-      html += '<div class="frontier-item-name">'+escHtml(h.communityLabel)+'</div>';
-      html += '<div class="frontier-item-meta">';
-      html += '<span>📄 '+h.recent_count+'篇新论文</span>';
-      html += '<span class="frontier-badge hot">热度 '+h.hot_score.toFixed(1)+'</span>';
-      html += '</div>';
-      html += '<div style="font-size:10px;color:#4a5580;margin-top:2px;">代表: '+escHtml(h.top_paper)+'</div>';
       html += '</div>';
     });
     html += '</div>';
@@ -910,7 +897,7 @@ function renderFrontier(data){
       html += '<div class="frontier-item-meta">';
       html += '<span>📅 '+p.year+'</span>';
       html += '<span class="frontier-badge bridge">跨'+p.cross_communities+'个社区</span>';
-      html += '<span style="color:#c070c0">桥接分 '+p.bridge_score.toFixed(2)+'</span>';
+      html += '<span style="color:#5c7cfa">PR:'+formatPR(p.pagerank)+'</span>';
       html += '</div>';
       html += '</div>';
     });
@@ -994,3 +981,4 @@ document.addEventListener('DOMContentLoaded',function(){
     content.style.display = content.style.display==='none'?'':'none';
   });
 });
+ 
